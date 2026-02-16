@@ -1,0 +1,134 @@
+name: Sync Directory Data
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC (low traffic time)
+    - cron: '0 2 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      sync_type:
+        description: 'Type of sync'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - incremental
+
+env:
+  NODE_VERSION: '18'
+  BATCH_SIZE: 50  # Process 50 files per commit to avoid rate limits
+  DELAY_MS: 2000  # 2 second delay between batches
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install axios fs-extra
+
+      - name: Fetch latest data from API
+        id: fetch-data
+        run: |
+          echo "Fetching latest directory data..."
+          # If you have an API endpoint, fetch data here
+          # curl -s "https://b2bleadgen.co/api/agencies?limit=1000" > data/raw-data.json
+          
+          # For now, we'll use the local data file
+          # In production, replace this with actual API call
+          echo "Using local data source..."
+          
+      - name: Generate markdown files
+        run: |
+          echo "Generating markdown files..."
+          node generate-markdown.js
+          
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Changed files:"
+            git status --short
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          fi
+
+      - name: Commit changes in batches
+        if: steps.check-changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Get list of changed files
+          changed_files=$(git status --porcelain | grep -E '^\s*M|^\s*\?\?' | awk '{print $2}')
+          
+          # Count total changes
+          total_changes=$(echo "$changed_files" | wc -l)
+          echo "Total files to commit: $total_changes"
+          
+          # Process in batches to avoid overwhelming git
+          batch_num=1
+          echo "$changed_files" | split -l ${{ env.BATCH_SIZE }} - batch_
+          
+          for batch_file in batch_*; do
+            echo "Processing batch $batch_num..."
+            
+            while IFS= read -r file; do
+              if [ -n "$file" ]; then
+                git add "$file"
+              fi
+            done < "$batch_file"
+            
+            # Commit this batch
+            git commit -m "📚 Sync batch $batch_num: Update directory entries ($(date +%Y-%m-%d))"
+            
+            # Delay between batches
+            sleep ${{ env.DELAY_MS }}
+            
+            batch_num=$((batch_num + 1))
+          done
+          
+          # Clean up batch files
+          rm -f batch_*
+          
+      - name: Push changes
+        if: steps.check-changes.outputs.changes == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          force: false
+
+      - name: Create sync summary
+        if: steps.check-changes.outputs.changes == 'true'
+        run: |
+          echo "## ✅ Sync Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date +%Y-%m-%d\ %H:%M:%S)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ github.event.inputs.sync_type || 'scheduled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Successfully synced directory data" >> $GITHUB_STEP_SUMMARY
+          
+      - name: No changes summary
+        if: steps.check-changes.outputs.changes == 'false'
+        run: |
+          echo "## ℹ️ No Changes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Directory is already up to date." >> $GITHUB_STEP_SUMMARY

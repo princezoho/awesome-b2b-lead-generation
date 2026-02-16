@@ -1,0 +1,35 @@
+{
+  "name": "awesome-b2b-lead-generation",
+  "version": "1.0.0",
+  "description": "A curated collection of 670+ B2B lead generation agencies and tools - the largest open database of its kind",
+  "main": "generate-markdown.js",
+  "scripts": {
+    "generate": "node generate-markdown.js",
+    "sync": "node sync-to-github.js",
+    "test": "echo \"Tests not implemented yet\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/talhaXdev/awesome-b2b-lead-generation.git"
+  },
+  "keywords": [
+    "b2b",
+    "lead-generation",
+    "sales",
+    "marketing",
+    "outreach",
+    "prospecting",
+    "awesome-list",
+    "directory"
+  ],
+  "author": "B2B Lead Gen Directory <talhaXdev>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/talhaXdev/awesome-b2b-lead-generation/issues"
+  },
+  "homepage": "https://b2bleadgen.co",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "fs-extra": "^11.1.0"
+  }
+}
