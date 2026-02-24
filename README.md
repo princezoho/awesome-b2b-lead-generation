@@ -27,6 +27,7 @@ For the complete interactive directory with advanced filtering, comparison tools
 ## ⭐ Top Rated Providers
 
 - [Clay](./diy-tools/clay.md) - ⭐ 4.9/5
+- [Suplex](./diy-tools/suplex.md) - ⭐ 4.8/5
 - [Apollo.io](./diy-tools/apolloio.md) - ⭐ 4.8/5
 - [Belkins](./appointment-setting/belkins.md) - ⭐ 4.8/5
 - [Full-Service Agencies](./full-service-agencies/full-service-agencies.md) - ⭐ 4.7/5
